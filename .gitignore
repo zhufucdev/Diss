@@ -1,2 +1,6 @@
-Pipfile.lock
-__pycache__
+/Pipfile.lock
+/proper_res
+/__pycache__
+/epui/__pycache__
+/venv
+/last_redraw.png
