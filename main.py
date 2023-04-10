@@ -81,7 +81,6 @@ def construct_ui(draw) -> Context:
             size=ViewSize.MATCH_PARENT,
             margin_top=20,
             margin_bottom=20,
-            margin_right=20
         )
     )
 
@@ -134,6 +133,7 @@ def construct_ui(draw) -> Context:
 
 def main(epd: EPD, context: Context, img: Image.Image):
     context.on_redraw(lambda: [
+        epd.init(),
         epd.display_frame(epd.get_frame_buffer(img)),
         img.save('last_redraw.png'),
         epd.sleep()
@@ -144,7 +144,6 @@ def main(epd: EPD, context: Context, img: Image.Image):
 
 if __name__ == '__main__':
     epd = EPD(red_bounds=(90, 125))
-    epd.init()
     img = Image.new('L', (EPD_WIDTH, EPD_HEIGHT), 255)
     draw = ImageDraw.Draw(img)
     context = construct_ui(draw)
