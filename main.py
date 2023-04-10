@@ -1,15 +1,41 @@
 import sys
 sys.path.append('./epui')
 
-import epui.cache as cache
+import schedule
+import time
+import threading
+
 import epui.resources as resources
 from epui.ui import *
-from epui.schedule import GoogleCalendarProvider, CalendarView, SquareDateView
+from epui.schedule import GoogleCalendarProvider, CalendarView, SquareDateView, CalendarProvider, Event
 from epui.weather import LargeWeatherView, WeatherTrendView, CaiYunWeatherProvider, Location, WeatherEffectiveness, CaiYunAPIProvider
-from threading import Thread
 from PIL import Image, ImageDraw
 from gdey075z08_driver.driver import EPD, EPD_HEIGHT, EPD_WIDTH
 
+
+class CachedCalendarProvider(CalendarProvider):
+    def __init__(self, parent: CalendarProvider):
+        self.__parent = parent
+        self.__cache = None
+        super().__init__(parent.get_name(), parent.get_max_results())
+
+    def invalidate(self) -> bool:
+        refreshed = self.__parent.get_events()
+        if refreshed == self.__cache:
+            return False
+        self.__cache = refreshed
+        return True
+
+    def get_events(self) -> List[Event]:
+        if self.__cache is None:
+            self.invalidate()
+
+        return self.__cache
+
+def start_schedule():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 def construct_ui(draw) -> Context:
     CANVAS_SIZE = (EPD_WIDTH, EPD_HEIGHT)
@@ -23,8 +49,7 @@ def construct_ui(draw) -> Context:
                         height=ViewSize.MATCH_PARENT
                     ))
     header = HGroup(context,
-                    prefer=ViewMeasurement.default(
-                        width=ViewSize.MATCH_PARENT),
+                    prefer=ViewMeasurement.default(width=ViewSize.MATCH_PARENT),
                     alignment=ViewAlignmentVertical.CENTER)
     vgroup.add_view(header)
     context.root_group.add_view(vgroup)
@@ -41,12 +66,44 @@ def construct_ui(draw) -> Context:
     weather_provider = CaiYunWeatherProvider(
         weather_api_provider
     )
-    calendar_provider = GoogleCalendarProvider(
+    calendar_provider = CachedCalendarProvider(GoogleCalendarProvider(
         name='GCP',
         credentials_file=resources.get_file('client_secret.json'),
         max_results=4,
         callback_addr='raspberrypi.local'
+    ))
+
+    calendar_view = CalendarView(
+        context,
+        provider=calendar_provider,
+        font=resources.get_file('NotoSansCJKBold'),
+        prefer=ViewMeasurement.default(
+            size=ViewSize.MATCH_PARENT,
+            margin_top=20,
+            margin_bottom=20,
+            margin_right=20
+        )
     )
+
+    large_weather_view = LargeWeatherView(
+        context,
+        provider=weather_provider,
+        prefer=ViewMeasurement.default(margin=20)
+    )
+
+    weather_trend_view = WeatherTrendView(
+        context,
+        title='24 hours',
+        provider=weather_provider,
+        effect=WeatherEffectiveness.HOURLY,
+        value=lambda w: w.temperature,
+        line_width=3,
+        prefer=ViewMeasurement.default(
+            size=ViewSize.MATCH_PARENT,
+        )
+    )
+
+
     header.add_views(
         SquareDateView(
             context,
@@ -54,37 +111,25 @@ def construct_ui(draw) -> Context:
                 height=ViewSize.MATCH_PARENT,
                 width=180
             ),
-            current_week_offset=-5),
-        LargeWeatherView(
-            context,
-            provider=weather_provider,
-            prefer=ViewMeasurement.default(margin=20)
-        ),
-        CalendarView(
-            context,
-            provider=calendar_provider,
-            font=resources.get_file('NotoSansCJKBold'),
-            prefer=ViewMeasurement.default(
-                size=ViewSize.MATCH_PARENT,
-                margin_top=20,
-                margin_bottom=20,
-                margin_right=20
-            )
-        )
+            current_week_offset=-6),
+        large_weather_view,
+        calendar_view
     )
-    vgroup.add_views(
-        WeatherTrendView(
-            context,
-            title='24 hours',
-            provider=weather_provider,
-            effect=WeatherEffectiveness.HOURLY,
-            value=lambda w: w.temperature,
-            prefer=ViewMeasurement.default(
-                size=ViewSize.MATCH_PARENT,
-            )
-        )
-    )
+    vgroup.add_view(weather_trend_view)
+
+    def refresh_calendar():
+        if calendar_provider.invalidate():
+            calendar_view.refresh()
+
+    def refresh_weather():
+        weather_provider.invalidate()
+        weather_trend_view.refresh()
+        large_weather_view.refresh()
+
+    schedule.every(30).seconds.do(refresh_calendar)
+    schedule.every(3).hours.do(refresh_weather)
     return context
+
 
 
 def main(epd: EPD, context: Context, img: Image.Image):
@@ -93,9 +138,8 @@ def main(epd: EPD, context: Context, img: Image.Image):
         img.save('last_redraw.png'),
         epd.sleep()
     ])
-    # context.redraw_once()
-    # epd.display_frame(epd.get_frame_buffer(img))
     context.start()
+    threading.Thread(target=start_schedule).start()
 
 
 if __name__ == '__main__':
