@@ -32,10 +32,12 @@ class CachedCalendarProvider(CalendarProvider):
 
         return self.__cache
 
-def start_schedule():
+def start_schedule(cached_provider: CachedCalendarProvider):
     while True:
         try:
-            schedule.run_pending()
+            in_time = next((event for event in cached_provider.get_events() if time.localtime() in event.get_time()), None)
+            if not in_time or not in_time.get_location() or '楼' not in in_time.get_location():
+                schedule.run_pending()
         except Exception as e:
             logging.error(e)
         time.sleep(1)
@@ -130,6 +132,7 @@ def construct_ui(draw) -> Context:
 
     schedule.every(30).seconds.do(refresh_calendar)
     schedule.every(3).hours.do(refresh_weather)
+    threading.Thread(target=start_schedule, args=[calendar_provider]).start()
     return context
 
 
@@ -142,7 +145,6 @@ def main(epd: EPD, context: Context, img: Image.Image):
         epd.sleep()
     ])
     context.start()
-    threading.Thread(target=start_schedule).start()
 
 
 if __name__ == '__main__':
