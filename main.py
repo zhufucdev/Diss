@@ -34,7 +34,10 @@ class CachedCalendarProvider(CalendarProvider):
 
 def start_schedule():
     while True:
-        schedule.run_pending()
+        try:
+            schedule.run_pending()
+        except Exception as e:
+            logging.error(e)
         time.sleep(1)
 
 def construct_ui(draw) -> Context:
