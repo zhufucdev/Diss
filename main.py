@@ -40,7 +40,7 @@ def start_schedule(cached_provider: CachedCalendarProvider):
                 schedule.run_pending()
         except Exception as e:
             logging.error(e)
-        time.sleep(1)
+        time.sleep(10)
 
 def construct_ui(draw) -> Context:
     CANVAS_SIZE = (EPD_WIDTH, EPD_HEIGHT)
