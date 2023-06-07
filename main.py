@@ -130,7 +130,7 @@ def construct_ui(draw) -> Context:
         weather_trend_view.refresh()
         large_weather_view.refresh()
 
-    schedule.every(30).seconds.do(refresh_calendar)
+    schedule.every(3).minutes.do(refresh_calendar)
     schedule.every(3).hours.do(refresh_weather)
     threading.Thread(target=start_schedule, args=[calendar_provider]).start()
     return context
@@ -144,6 +144,7 @@ def main(epd: EPD, context: Context, img: Image.Image):
         img.save('last_redraw.png'),
         epd.sleep()
     ])
+    context.set_panic_handler(lambda x: logging.critical(x, exc_info=True))
     context.start()
 
 
