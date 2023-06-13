@@ -1,7 +1,7 @@
 import sys
 
 from display import Display
-from local_display import LocalDisplay
+from gdey_display import GdeyDisplay
 
 sys.path.append('./epui')
 
@@ -86,7 +86,7 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
     calendar_view = CalendarView(
         context,
         provider=calendar_provider,
-        font=resources.get_file('NotoSansCJKBold'),
+        font=resources.get_file('NotoSansCJKBold') or TextView.default_font,
         prefer=ViewMeasurement.default(
             size=ViewSize.MATCH_PARENT,
             margin_top=20,
@@ -147,7 +147,7 @@ def main(display: Display, context: Context, img: Image.Image):
 
 
 if __name__ == '__main__':
-    display = LocalDisplay()
+    display = GdeyDisplay()
 
     img = Image.new('L', display.canvas_size, 255)
     draw = ImageDraw.Draw(img)
