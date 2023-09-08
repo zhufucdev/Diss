@@ -115,7 +115,7 @@ def construct_ui(draw) -> Context:
                 height=ViewSize.MATCH_PARENT,
                 width=180
             ),
-            current_week_offset=-6),
+            current_week_offset=-35),
         large_weather_view,
         calendar_view
     )
