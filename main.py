@@ -1,16 +1,19 @@
 import sys
+
+from display import Display
+from gdey_display import GdeyDisplay
+
 sys.path.append('./epui')
 
 import schedule
 import time
 import threading
 
-import epui.resources as resources
 from epui.ui import *
 from epui.schedule import GoogleCalendarProvider, CalendarView, SquareDateView, CalendarProvider, Event
-from epui.weather import LargeWeatherView, WeatherTrendView, CaiYunWeatherProvider, Location, WeatherEffectiveness, CaiYunAPIProvider
+from epui.weather import LargeWeatherView, WeatherTrendView, CaiYunWeatherProvider, Location, WeatherEffectiveness, \
+    CaiYunAPIProvider
 from PIL import Image, ImageDraw
-from gdey075z08_driver.driver import EPD, EPD_HEIGHT, EPD_WIDTH
 
 
 class CachedCalendarProvider(CalendarProvider):
@@ -32,21 +35,23 @@ class CachedCalendarProvider(CalendarProvider):
 
         return self.__cache
 
+
 def start_schedule(cached_provider: CachedCalendarProvider):
     while True:
         try:
-            in_time = next((event for event in cached_provider.get_events() if time.localtime() in event.get_time()), None)
+            in_time = next((event for event in cached_provider.get_events() if time.localtime() in event.get_time()),
+                           None)
             if not in_time or not in_time.get_location() or '楼' not in in_time.get_location():
                 schedule.run_pending()
         except Exception as e:
             logging.error(e)
         time.sleep(10)
 
-def construct_ui(draw) -> Context:
-    CANVAS_SIZE = (EPD_WIDTH, EPD_HEIGHT)
+
+def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
     resources.resources_dir.append('proper_res')
 
-    context = Context(draw, CANVAS_SIZE)
+    context = Context(draw, canvas_size)
     vgroup = VGroup(context,
                     alignment=ViewAlignmentHorizontal.CENTER,
                     prefer=ViewMeasurement.default(
@@ -75,13 +80,13 @@ def construct_ui(draw) -> Context:
         name='GCP',
         credentials_file=resources.get_file('client_secret.json'),
         max_results=4,
-        callback_addr='raspberrypi.local'
+        callback_addr='0.0.0.0'
     ))
 
     calendar_view = CalendarView(
         context,
         provider=calendar_provider,
-        font=resources.get_file('NotoSansCJKBold'),
+        font=resources.get_file('NotoSansCJKBold') or TextView.default_font,
         prefer=ViewMeasurement.default(
             size=ViewSize.MATCH_PARENT,
             margin_top=20,
@@ -106,7 +111,6 @@ def construct_ui(draw) -> Context:
             size=ViewSize.MATCH_PARENT,
         )
     )
-
 
     header.add_views(
         SquareDateView(
@@ -136,22 +140,17 @@ def construct_ui(draw) -> Context:
     return context
 
 
-
-def main(epd: EPD, context: Context, img: Image.Image):
-    context.on_redraw(lambda: [
-        epd.init(),
-        epd.display_frame(epd.get_frame_buffer(img)),
-        img.save('last_redraw.png'),
-        epd.sleep()
-    ])
+def main(display: Display, context: Context, img: Image.Image):
+    context.on_redraw(lambda: display.draw(img))
     context.set_panic_handler(lambda x: logging.critical(x, exc_info=True))
     context.start()
 
 
 if __name__ == '__main__':
-    epd = EPD(red_bounds=(90, 125))
-    img = Image.new('L', (EPD_WIDTH, EPD_HEIGHT), 255)
-    draw = ImageDraw.Draw(img)
-    context = construct_ui(draw)
+    display = GdeyDisplay()
 
-    main(epd, context, img)
+    img = Image.new('L', display.canvas_size, 255)
+    draw = ImageDraw.Draw(img)
+    context = construct_ui(draw, display.canvas_size)
+
+    main(display, context, img)
