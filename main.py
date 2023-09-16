@@ -78,9 +78,9 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
     )
     calendar_provider = CachedCalendarProvider(GoogleCalendarProvider(
         name='GCP',
-        credentials_file=resources.get_file('client_secret.json'),
+        calendar_id='a0a362a024e4c2a138485842f2a43f179d0af0762dadeb5947c6e8257b97db76@group.calendar.google.com',
+        api_key='AIzaSyAUgHG1gF07iaQ9UvZQGkFjFZUQXAEy7e8',
         max_results=4,
-        callback_addr='0.0.0.0'
     ))
 
     calendar_view = CalendarView(
