@@ -1,7 +1,7 @@
+import argparse
 import sys
 
 from display import Display
-from gdey_display import GdeyDisplay
 
 sys.path.append('./epui')
 
@@ -76,12 +76,14 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
     weather_provider = CaiYunWeatherProvider(
         weather_api_provider
     )
-    calendar_provider = CachedCalendarProvider(GoogleCalendarProvider(
-        name='GCP',
-        calendar_id='a0a362a024e4c2a138485842f2a43f179d0af0762dadeb5947c6e8257b97db76@group.calendar.google.com',
-        api_key='AIzaSyAUgHG1gF07iaQ9UvZQGkFjFZUQXAEy7e8',
-        max_results=4,
-    ))
+    with open(resources.get_file('gcp_key'), 'rb') as f:
+        cid, key = f.read().decode('utf-8').splitlines()
+        calendar_provider = CachedCalendarProvider(GoogleCalendarProvider(
+            name='GCP',
+            calendar_id=cid,
+            api_key=key,
+            max_results=4,
+        ))
 
     calendar_view = CalendarView(
         context,
@@ -147,7 +149,16 @@ def main(display: Display, context: Context, img: Image.Image):
 
 
 if __name__ == '__main__':
-    display = GdeyDisplay()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true', help='Debug mode')
+    args = parser.parse_args()
+    if args.debug:
+        from local_display import LocalDisplay
+        display = LocalDisplay(800, 480)
+    else:
+        from gdey_display import GdeyDisplay
+        display = GdeyDisplay()
+
 
     img = Image.new('L', display.canvas_size, 255)
     draw = ImageDraw.Draw(img)
