@@ -1,14 +1,6 @@
 # Desktop Integrated Scheduling System
-
-<div style="display: flex">
-<img src="https://zhufucdev.com/api/images/EJ1yzDqW65gFJ9fWHTGoC" style="height: 200px; width: 200px; object-fit: cover; margin-right: 24px">
-
 Some micro hardware project to bring the busy schedule
 right in front of you
-</div>
-
-
-
 
 ## How to build
 Need some monitor, so that you can see the pixels
