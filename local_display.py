@@ -1,5 +1,4 @@
 import logging
-import threading
 
 import pygame
 from PIL.Image import Image
