@@ -18,6 +18,8 @@ from epui.weather import LargeWeatherView, Location, WeatherEffectiveness, \
     WeatherFlowView, WeatherProvider, Weather, HeFengWeatherProvider, HeFengAPIProvider
 from PIL import Image, ImageDraw
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+
 
 class CachedCalendarProvider(CalendarProvider):
     def __init__(self, parent: CalendarProvider):
@@ -49,8 +51,8 @@ class SlicedWeatherProvider(WeatherProvider):
         return self.__parent.get_weather()[self.__range.start:self.__range.stop]
 
 
-def start_schedule(cached_provider: CachedCalendarProvider):
-    while True:
+def start_schedule(cached_provider: CachedCalendarProvider, context: Context):
+    while not context.status == EventLoopStatus.STOPPED:
         try:
             in_time = next((event for event in cached_provider.get_events() if time.localtime() in event.get_time()),
                            None)
@@ -75,21 +77,17 @@ def gen_commit_message_getter():
         res = requests.get('https://whatthecommit.com/index.txt')
         text = res.text.strip(' \n')
         i = 5
-        j = 0
         while i < len(text):
             t = i
             while t < len(text) and not text[t].isspace():
                 t += 1
             if t >= len(text):
-                t = i
-                while t > j and not text[t].isspace():
-                    t -= 1
+                break
             if t == -1:
                 text = text[0:i] + '\\\n' + text[i:]
             else:
                 i = t
                 text = text[0:i] + ' \\\n' + text[i + 1:]
-            j = i
             i += 10
         text = f'[\uf43a {datetime.datetime.now().strftime("%H:%M:%S")}]\n$ git commit -m \\\n{text}'
         commit['text'] = text
@@ -102,19 +100,13 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
     resources.resources_dir.append('proper_res')
 
     context = Context(draw, canvas_size, accent_color=253)
-    hgroup_root = HGroup(context, prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT))
-    vgroup_left = VGroup(context,
-                         alignment=ViewAlignmentHorizontal.CENTER,
-                         prefer=ViewMeasurement.default(height=ViewSize.MATCH_PARENT))
-    vgroup_right = VGroup(context,
-                          alignment=ViewAlignmentHorizontal.CENTER,
-                          prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT))
+    vgroup_root = VGroup(context, prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT))
     header = HGroup(context,
-                    prefer=ViewMeasurement.default(width=ViewSize.MATCH_PARENT),
-                    alignment=ViewAlignmentVertical.CENTER)
-    vgroup_left.add_view(header)
-    hgroup_root.add_views(vgroup_left, vgroup_right)
-    context.root_group.add_view(hgroup_root)
+                    prefer=ViewMeasurement.default(width=ViewSize.MATCH_PARENT))
+    tail = HGroup(context,
+                  prefer=ViewMeasurement.default(width=ViewSize.MATCH_PARENT, margin_top=20))
+    vgroup_root.add_views(header, tail)
+    context.root_group.add_view(vgroup_root)
 
     with open(resources.get_file('hefeng_key'), 'rb') as f:
         weather_api_provider = HeFengAPIProvider(
@@ -140,29 +132,25 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
             max_results=8,
         ))
 
-    calendar_view = CalendarView(
-        context,
-        provider=calendar_provider,
-        font=resources.get_file('NotoSansCJKBold') or TextView.default_font,
-        prefer=ViewMeasurement.default(
-            size=ViewSize.MATCH_PARENT,
-            margin_top=20,
-        )
-    )
-
     large_weather_view = LargeWeatherView(
         context,
         provider=weather_provider,
         prefer=ViewMeasurement.default(margin=20)
     )
 
+    calendar_view = CalendarView(
+        context,
+        provider=calendar_provider,
+        font=resources.get_file('NotoSansCJKBold') or TextView.default_font,
+        prefer=ViewMeasurement.default(height=ViewSize.WRAP_CONTENT, width=400, margin_right=20)
+    )
+
     commit_view = TextView(
         context,
         text=gen_commit_message_getter(),
         font_size=26,
-        align_horizontal=ViewAlignmentHorizontal.CENTER,
-        prefer=ViewMeasurement.default(height=ViewSize.MATCH_PARENT, margin_top=4),
-        font=resources.get_file('CommitMonoNerdFont-Regular')
+        font=resources.get_file('CommitMonoNerdFont-Regular'),
+        prefer=ViewMeasurement.default(width=ViewSize.MATCH_PARENT)
     )
 
     def default_weather_flow(provider: WeatherProvider):
@@ -180,7 +168,6 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
         default_weather_flow(weather_provider_front),
         default_weather_flow(weather_provider_rear)
     )
-    vgroup_right.add_view(weather_grid)
 
     header.add_views(
         SquareDateView(
@@ -191,9 +178,9 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
             ),
             first_week='2023-08-22'),
         large_weather_view,
+        weather_grid
     )
-    vgroup_left.add_view(calendar_view)
-    vgroup_right.add_view(commit_view)
+    tail.add_views(calendar_view, commit_view)
 
     def refresh_calendar():
         if calendar_provider.invalidate():
@@ -207,8 +194,8 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
 
     schedule.every(3).minutes.do(refresh_calendar)
     schedule.every(3).hours.do(refresh_weather)
-    schedule.every(10).minutes.do(commit_view.invalidate)
-    threading.Thread(target=start_schedule, args=[calendar_provider]).start()
+    schedule.every(10).seconds.do(commit_view.invalidate)
+    threading.Thread(target=start_schedule, args=[calendar_provider, context]).start()
     return context
 
 
@@ -216,6 +203,9 @@ def main(display: Display, context: Context, img: Image.Image):
     context.on_redraw(lambda: display.draw(img))
     context.set_panic_handler(lambda x: logging.critical(x, exc_info=True))
     context.start()
+    logging.info('context started')
+    if display.start():
+        context.destroy()
 
 
 if __name__ == '__main__':
