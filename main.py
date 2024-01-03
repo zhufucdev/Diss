@@ -1,5 +1,8 @@
 import argparse
+import datetime
 import sys
+
+import requests
 
 from display import Display
 
@@ -11,8 +14,8 @@ import threading
 
 from epui.ui import *
 from epui.schedule import GoogleCalendarProvider, CalendarView, SquareDateView, CalendarProvider, Event
-from epui.weather import LargeWeatherView, WeatherTrendView, CaiYunWeatherProvider, Location, WeatherEffectiveness, \
-    CaiYunAPIProvider, WeatherFlowView, WeatherProvider, Weather, HeFengWeatherProvider, HeFengAPIProvider
+from epui.weather import LargeWeatherView, Location, WeatherEffectiveness, \
+    WeatherFlowView, WeatherProvider, Weather, HeFengWeatherProvider, HeFengAPIProvider
 from PIL import Image, ImageDraw
 
 
@@ -58,13 +61,51 @@ def start_schedule(cached_provider: CachedCalendarProvider):
         time.sleep(10)
 
 
+def gen_commit_message_getter():
+    commit = {
+        'text': '',
+        'time': datetime.datetime.now()
+    }
+
+    def getter():
+        if not commit['text'] == '' and datetime.datetime.now() - commit['time'] < datetime.timedelta(
+                seconds=30):
+            return commit['text']
+        res = requests.get('https://whatthecommit.com/index.txt')
+        commit['time'] = datetime.datetime.now()
+        text = res.text.strip()
+        i = 5
+        j = 0
+        while i < len(text):
+            t = i
+            while t < len(text) and not text[t].isspace():
+                t += 1
+            if t >= len(text):
+                t = i
+                while t > j and not text[t].isspace():
+                    t -= 1
+            if t == -1:
+                text = text[0:i] + '-\\\n' + text[i:]
+            else:
+                i = t
+                text = text[0:i] + '\\\n' + text[i + 1:]
+            j = i
+            i += 10
+        text = f'$ git commit -m\\\n{text}'
+        commit['text'] = text
+        return text
+
+    return getter
+
+
 def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
     resources.resources_dir.append('proper_res')
 
     context = Context(draw, canvas_size)
     hgroup_root = HGroup(context, prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT))
     vgroup_left = VGroup(context,
-                         alignment=ViewAlignmentHorizontal.CENTER)
+                         alignment=ViewAlignmentHorizontal.CENTER,
+                         prefer=ViewMeasurement.default(height=ViewSize.MATCH_PARENT))
     vgroup_right = VGroup(context,
                           alignment=ViewAlignmentHorizontal.CENTER,
                           prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT))
@@ -114,6 +155,16 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
         prefer=ViewMeasurement.default(margin=20)
     )
 
+    commit_view = TextView(
+        context,
+        text=gen_commit_message_getter(),
+        font_size=26,
+        align_vertical=ViewAlignmentVertical.CENTER,
+        align_horizontal=ViewAlignmentHorizontal.CENTER,
+        prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT),
+        font=resources.get_file('CommitMonoNerdFont-Regular')
+    )
+
     def default_weather_flow(provider: WeatherProvider):
         return WeatherFlowView(
             context,
@@ -138,10 +189,11 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
                 height=ViewSize.MATCH_PARENT,
                 width=180
             ),
-            current_week_offset=-34),
+            first_week='2023-08-22'),
         large_weather_view,
     )
     vgroup_left.add_view(calendar_view)
+    vgroup_right.add_view(commit_view)
 
     def refresh_calendar():
         if calendar_provider.invalidate():
@@ -155,6 +207,7 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
 
     schedule.every(3).minutes.do(refresh_calendar)
     schedule.every(3).hours.do(refresh_weather)
+    schedule.every(1).minutes.do(commit_view.invalidate)
     threading.Thread(target=start_schedule, args=[calendar_provider]).start()
     return context
 
