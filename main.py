@@ -101,7 +101,7 @@ def gen_commit_message_getter():
 def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
     resources.resources_dir.append('proper_res')
 
-    context = Context(draw, canvas_size)
+    context = Context(draw, canvas_size, accent_color=253)
     hgroup_root = HGroup(context, prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT))
     vgroup_left = VGroup(context,
                          alignment=ViewAlignmentHorizontal.CENTER,
