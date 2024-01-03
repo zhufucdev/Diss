@@ -7,7 +7,7 @@ from display import Display
 class GdeyDisplay(Display):
     def __init__(self):
         super().__init__((EPD_WIDTH, EPD_HEIGHT))
-        self.__epd = EPD(red_bounds=(90, 125))
+        self.__epd = EPD(red_bounds=(1, 2))
 
     def draw(self, canvas: Image):
         self.__epd.init(),

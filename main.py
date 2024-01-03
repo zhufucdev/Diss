@@ -126,6 +126,7 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
         )
 
     weather_provider = HeFengWeatherProvider(
+        context,
         weather_api_provider
     )
     weather_provider_front = SlicedWeatherProvider(weather_provider, range(0, 12))
