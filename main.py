@@ -85,7 +85,7 @@ def gen_commit_message_getter():
                 while t > j and not text[t].isspace():
                     t -= 1
             if t == -1:
-                text = text[0:i] + '-\\\n' + text[i:]
+                text = text[0:i] + '\\\n' + text[i:]
             else:
                 i = t
                 text = text[0:i] + ' \\\n' + text[i + 1:]
