@@ -231,7 +231,7 @@ if __name__ == '__main__':
     else:
         from gdey_display import GdeyDisplay
 
-        display = GdeyDisplay()
+        display = GdeyDisplay(accent_color=253)
 
     View.draw_bounds_box = args.bounds
 
