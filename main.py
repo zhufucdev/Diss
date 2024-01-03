@@ -71,8 +71,8 @@ def gen_commit_message_getter():
         if not commit['text'] == '' and datetime.datetime.now() - commit['time'] < datetime.timedelta(
                 seconds=30):
             return commit['text']
-        res = requests.get('https://whatthecommit.com/index.txt')
         commit['time'] = datetime.datetime.now()
+        res = requests.get('https://whatthecommit.com/index.txt')
         text = res.text.strip(' \n')
         i = 5
         j = 0
