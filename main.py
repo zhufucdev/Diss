@@ -73,7 +73,7 @@ def gen_commit_message_getter():
             return commit['text']
         res = requests.get('https://whatthecommit.com/index.txt')
         commit['time'] = datetime.datetime.now()
-        text = res.text.strip()
+        text = res.text.strip(' \n')
         i = 5
         j = 0
         while i < len(text):
@@ -91,7 +91,7 @@ def gen_commit_message_getter():
                 text = text[0:i] + ' \\\n' + text[i + 1:]
             j = i
             i += 10
-        text = f'$ git commit -m \\\n{text}'
+        text = f'[\uf43a {datetime.datetime.now().strftime("%H:%M:%S")}]\n$ git commit -m \\\n{text}'
         commit['text'] = text
         return text
 
