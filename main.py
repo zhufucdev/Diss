@@ -69,26 +69,26 @@ def gen_commit_message_getter():
         'time': datetime.datetime.now()
     }
 
-    def getter():
+    def getter(initial: int = 30, increment: int = 31, break_threshold: int = 6):
         if not commit['text'] == '' and datetime.datetime.now() - commit['time'] < datetime.timedelta(
                 seconds=30):
             return commit['text']
         commit['time'] = datetime.datetime.now()
         res = requests.get('https://whatthecommit.com/index.txt')
         text = res.text.strip(' \n')
-        i = 5
+        i = initial
         while i < len(text):
             t = i
-            while t < len(text) and not text[t].isspace():
+            while t < len(text) and t - i < break_threshold and not text[t].isspace():
                 t += 1
             if t >= len(text):
                 break
-            if t == -1:
+            elif t - i >= break_threshold:
                 text = text[0:i] + '\\\n' + text[i:]
             else:
                 i = t
                 text = text[0:i] + ' \\\n' + text[i + 1:]
-            i += 10
+            i += increment
         text = f'[\uf43a {datetime.datetime.now().strftime("%H:%M:%S")}]\n$ git commit -m \\\n{text}'
         commit['text'] = text
         return text
@@ -148,7 +148,7 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
     commit_view = TextView(
         context,
         text=gen_commit_message_getter(),
-        font_size=26,
+        font_size=16,
         font=resources.get_file('CommitMonoNerdFont-Regular'),
         prefer=ViewMeasurement.default(width=ViewSize.MATCH_PARENT)
     )
