@@ -207,7 +207,7 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
 
     schedule.every(3).minutes.do(refresh_calendar)
     schedule.every(3).hours.do(refresh_weather)
-    schedule.every(1).minutes.do(commit_view.invalidate)
+    schedule.every(3).minutes.do(commit_view.invalidate)
     threading.Thread(target=start_schedule, args=[calendar_provider]).start()
     return context
 
