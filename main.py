@@ -88,7 +88,7 @@ def gen_commit_message_getter():
                 text = text[0:i] + '-\\\n' + text[i:]
             else:
                 i = t
-                text = text[0:i] + '\\\n' + text[i + 1:]
+                text = text[0:i] + ' \\\n' + text[i + 1:]
             j = i
             i += 10
         text = f'$ git commit -m\\\n{text}'
