@@ -159,9 +159,8 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
         context,
         text=gen_commit_message_getter(),
         font_size=26,
-        align_vertical=ViewAlignmentVertical.CENTER,
         align_horizontal=ViewAlignmentHorizontal.CENTER,
-        prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT),
+        prefer=ViewMeasurement.default(height=ViewSize.MATCH_PARENT, margin_top=4),
         font=resources.get_file('CommitMonoNerdFont-Regular')
     )
 
