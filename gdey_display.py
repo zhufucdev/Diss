@@ -14,13 +14,13 @@ class GdeyDisplay(Display):
     def draw(self, canvas: Image):
         self.__epd.init()
         dithered = canvas.convert('1')
-        drawing = PIL.Image.new('255', self.canvas_size)
+        drawing = PIL.Image.new('L', self.canvas_size)
         for y in range(self.canvas_size[1]):
             for x in range(self.canvas_size[0]):
                 if canvas.getpixel(xy=(x, y)) == self.__acc_color:
                     drawing.putpixel(xy=(x, y), value=self.__acc_color)
                 else:
-                    drawing.putpixel(xy=(x, y), value=dithered.getpixel((x, y)))
+                    drawing.putpixel(xy=(x, y), value=0 if dithered.getpixel((x, y)) == 0 else 255)
 
         self.__epd.display_frame(self.__epd.get_frame_buffer(drawing))
         self.__epd.sleep()
