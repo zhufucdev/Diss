@@ -59,7 +59,7 @@ def start_schedule(cached_provider: CachedCalendarProvider, context: Context):
             if not in_time or not in_time.get_location() or '楼' not in in_time.get_location():
                 schedule.run_pending()
         except Exception as e:
-            logging.error(e)
+            logging.critical(e, exc_info=True)
         time.sleep(10)
 
 
@@ -189,7 +189,7 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
     def refresh_weather():
         weather_provider.invalidate()
         for view in weather_grid.get_children():
-            view.refresh()
+            view.invalidate()
         large_weather_view.refresh()
 
     schedule.every(3).minutes.do(refresh_calendar)
