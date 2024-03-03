@@ -176,7 +176,7 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
                 height=ViewSize.MATCH_PARENT,
                 width=180
             ),
-            first_week='2023-08-22'),
+            first_week='2024-02-26'),
         large_weather_view,
         weather_grid
     )

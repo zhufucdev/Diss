@@ -4,7 +4,7 @@
     <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoredPackages">
         <value>
-          <list size="27">
+          <list size="28">
             <item index="0" class="java.lang.String" itemvalue="protobuf" />
             <item index="1" class="java.lang.String" itemvalue="rsa" />
             <item index="2" class="java.lang.String" itemvalue="googleapis-common-protos" />
@@ -32,6 +32,7 @@
             <item index="24" class="java.lang.String" itemvalue="spidev" />
             <item index="25" class="java.lang.String" itemvalue="rpi-gpio" />
             <item index="26" class="java.lang.String" itemvalue="gdey075z08-driver" />
+            <item index="27" class="java.lang.String" itemvalue="pygame" />
           </list>
         </value>
       </option>
