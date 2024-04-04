@@ -29,6 +29,7 @@ six = "==1.16.0"
 uritemplate = "==4.1.1"
 urllib3 = "==1.26.16"
 pygame = "*"
+flask = "*"
 
 [dev-packages]
 

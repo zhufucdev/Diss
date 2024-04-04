@@ -4,8 +4,6 @@ import sys
 
 import requests
 
-from display import Display
-
 sys.path.append('./epui')
 
 import schedule
@@ -51,18 +49,6 @@ class SlicedWeatherProvider(WeatherProvider):
         return self.__parent.get_weather()[self.__range.start:self.__range.stop]
 
 
-def start_schedule(cached_provider: CachedCalendarProvider, context: Context):
-    while not context.status == EventLoopStatus.STOPPED:
-        try:
-            in_time = next((event for event in cached_provider.get_events() if time.localtime() in event.get_time()),
-                           None)
-            if not in_time or not in_time.get_location() or '楼' not in in_time.get_location():
-                schedule.run_pending()
-        except Exception as e:
-            logging.critical(e, exc_info=True)
-        time.sleep(10)
-
-
 def gen_commit_message_getter():
     commit = {
         'text': '',
@@ -96,10 +82,10 @@ def gen_commit_message_getter():
     return getter
 
 
-def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
+def construct_ui(draw, canvas_size: tuple[int, int]) -> Context:
+    context = Context(draw, canvas_size, accent_color=253)
     resources.resources_dir.append('proper_res')
 
-    context = Context(draw, canvas_size, accent_color=253)
     vgroup_root = VGroup(context, prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT))
     header = HGroup(context,
                     prefer=ViewMeasurement.default(width=ViewSize.MATCH_PARENT))
@@ -192,26 +178,29 @@ def construct_ui(draw, canvas_size: Tuple[int, int]) -> Context:
             view.invalidate()
         large_weather_view.refresh()
 
+    def start_schedule():
+        while not context.status == EventLoopStatus.STOPPED:
+            try:
+                in_time = next((event for event in calendar_provider.get_events() if time.localtime() in event.get_time()),
+                               None)
+                if not in_time or not in_time.get_location() or '楼' not in in_time.get_location():
+                    schedule.run_pending()
+            except Exception as e:
+                logging.critical(e, exc_info=True)
+            time.sleep(10)
+
     schedule.every(3).minutes.do(refresh_calendar)
     schedule.every(3).hours.do(refresh_weather)
     schedule.every(30).minutes.do(commit_view.invalidate)
-    threading.Thread(target=start_schedule, args=[calendar_provider, context]).start()
+    threading.Thread(target=start_schedule).start()
     return context
 
 
-def main(display: Display, context: Context, img: Image.Image):
-    context.on_redraw(lambda: display.draw(img))
-    context.set_panic_handler(lambda x: logging.critical(x, exc_info=True))
-    context.start()
-    logging.info('context started')
-    if display.start():
-        context.destroy()
-
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', action='store_true', help='Debug mode')
     parser.add_argument('-b', '--bounds', action='store_true', help='Show bounds')
+    parser.add_argument("-l", "--listen", help='API address, or disable if none', default=None, nargs='?')
     args = parser.parse_args()
 
     if args.debug:
@@ -227,6 +216,18 @@ if __name__ == '__main__':
 
     img = Image.new('L', display.canvas_size, 255)
     draw = ImageDraw.Draw(img)
-    context = construct_ui(draw, display.canvas_size)
 
-    main(display, context, img)
+    context = construct_ui(draw, display.canvas_size)
+    context.on_redraw(lambda: display.draw(img))
+    context.set_panic_handler(lambda x: logging.critical(x, exc_info=True))
+    context.start()
+    logging.info('context started')
+    display.start()
+    if display.is_blocking:
+        context.destroy()
+    else:
+        display.start()
+
+
+if __name__ == '__main__':
+    main()

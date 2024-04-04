@@ -8,7 +8,7 @@ from display import Display
 
 class LocalDisplay(Display):
     def __init__(self, width: int, height: int):
-        super().__init__((width, height))
+        super().__init__((width, height), True)
         pygame.init()
         self.__screen = pygame.display.set_mode(self.canvas_size)
         self.__surface = None
@@ -34,7 +34,6 @@ class LocalDisplay(Display):
                 running = False
 
         pygame.quit()
-        return True
 
     def draw(self, canvas: Image):
         self.__surface = pygame.image.fromstring(canvas.convert('RGB').tobytes(), self.canvas_size, 'RGB')

@@ -7,7 +7,7 @@ from display import Display
 
 class GdeyDisplay(Display):
     def __init__(self, accent_color: int):
-        super().__init__((EPD_WIDTH, EPD_HEIGHT))
+        super().__init__((EPD_WIDTH, EPD_HEIGHT), False)
         self.__acc_color = accent_color
         self.__epd = EPD(red_bounds=(accent_color, accent_color + 1))
 
