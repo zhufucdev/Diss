@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import sys
+import xmlrpc.client
 
 import requests
 
@@ -9,6 +10,8 @@ sys.path.append('./epui')
 import schedule
 import time
 import threading
+import io
+from xmlrpc.server import SimpleXMLRPCServer
 
 from epui.ui import *
 from epui.schedule import GoogleCalendarProvider, CalendarView, SquareDateView, CalendarProvider, Event
@@ -82,7 +85,7 @@ def gen_commit_message_getter():
     return getter
 
 
-def construct_ui(draw, canvas_size: tuple[int, int]) -> Context:
+def construct_ui(draw, canvas_size: tuple[int, int], api_addr: str | None) -> Context:
     context = Context(draw, canvas_size, accent_color=253)
     resources.resources_dir.append('proper_res')
 
@@ -178,16 +181,49 @@ def construct_ui(draw, canvas_size: tuple[int, int]) -> Context:
             view.invalidate()
         large_weather_view.refresh()
 
+    def setup_rpc_server(listen_addr: str):
+        split = listen_addr.split(':')
+        server = SimpleXMLRPCServer((split[0], int(split[1])), allow_none=True)
+
+        @server.register_function()
+        def display(binary: xmlrpc.client.Binary, idle: float):
+            buf = io.BytesIO()
+            buf.write(binary.data)
+            buf.seek(0)
+            image = Image.open(buf).convert('L')
+            original = context.root_group.get_children()
+            context.root_group.clear()
+            context.root_group.add_view(
+                ImageView(context, image, prefer=ViewMeasurement.default(size=ViewSize.MATCH_PARENT)))
+
+            def recover():
+                sleep(idle)
+                context.root_group.clear()
+                context.root_group.add_views(*original)
+
+            threading.Thread(target=recover).start()
+
+        threading.Thread(target=server.serve_forever).start()
+        logging.info(f'rpc on {listen_addr}')
+
+        return server
+
     def start_schedule():
+        if api_addr:
+            server = setup_rpc_server(api_addr)
+
         while not context.status == EventLoopStatus.STOPPED:
             try:
-                in_time = next((event for event in calendar_provider.get_events() if time.localtime() in event.get_time()),
-                               None)
+                in_time = next(
+                    (event for event in calendar_provider.get_events() if time.localtime() in event.get_time()), None)
                 if not in_time or not in_time.get_location() or '楼' not in in_time.get_location():
                     schedule.run_pending()
             except Exception as e:
                 logging.critical(e, exc_info=True)
             time.sleep(10)
+
+        if api_addr:
+            server.shutdown()
 
     schedule.every(3).minutes.do(refresh_calendar)
     schedule.every(3).hours.do(refresh_weather)
@@ -200,7 +236,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', action='store_true', help='Debug mode')
     parser.add_argument('-b', '--bounds', action='store_true', help='Show bounds')
-    parser.add_argument("-l", "--listen", help='API address, or disable if none', default=None, nargs='?')
+    parser.add_argument('-l', '--listen', help='API address, or disable if none', const='localhost:9090', default=None,
+                        nargs='?')
     args = parser.parse_args()
 
     if args.debug:
@@ -217,7 +254,7 @@ def main():
     img = Image.new('L', display.canvas_size, 255)
     draw = ImageDraw.Draw(img)
 
-    context = construct_ui(draw, display.canvas_size)
+    context = construct_ui(draw, display.canvas_size, args.listen)
     context.on_redraw(lambda: display.draw(img))
     context.set_panic_handler(lambda x: logging.critical(x, exc_info=True))
     context.start()
