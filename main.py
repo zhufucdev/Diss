@@ -243,7 +243,7 @@ def main():
     if args.debug:
         from local_display import LocalDisplay
 
-        display = LocalDisplay(800, 480)
+        display = LocalDisplay(800, 480, 253)
     else:
         from gdey_display import GdeyDisplay
 

@@ -7,11 +7,12 @@ from display import Display
 
 
 class LocalDisplay(Display):
-    def __init__(self, width: int, height: int):
+    def __init__(self, width: int, height: int, accent_color: int):
         super().__init__((width, height), True)
         pygame.init()
         self.__screen = pygame.display.set_mode(self.canvas_size)
         self.__surface = None
+        self.__accent_color = accent_color
 
     def start(self):
         clock = pygame.time.Clock()
@@ -36,5 +37,7 @@ class LocalDisplay(Display):
         pygame.quit()
 
     def draw(self, canvas: Image):
-        self.__surface = pygame.image.fromstring(canvas.convert('RGB').tobytes(), self.canvas_size, 'RGB')
+        self.__surface = pygame.image.fromstring(
+            canvas.point(lambda x: 100 if x == self.__accent_color else x).convert('RGB').tobytes(),
+            self.canvas_size,'RGB')
         logging.info('buffer flushed')
